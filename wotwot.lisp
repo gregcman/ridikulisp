@@ -154,6 +154,9 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
       *max-memory*))
 
 (defun make-konsnum (ze1 ze2)
+  #+nil
+  ;;;;FIXME::this does not work, because the konz cells that
+  ;;;;are being constructed in for example lizt will be collected?
   (when (need-to-collect-p *konznum-cell-count*)
     (collect))
   (let ((start *heap-pointer*))
@@ -280,6 +283,8 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
 	     ;;   (logged)
 	     (incf read-pointer
 		   *alloc-delta*)))))
+    (when (need-to-collect-p)
+      (error "heap exhausted"))
     (delete-extra-gc-pages)
     cells-collected))
 
