@@ -8,7 +8,7 @@
 
 (defun konz (ze1 ze2)
   (let ((a (make-instance 'konz 'kar ze1))
-	(d (make-instance 'konz 'kar ze2)))
+	(d (make-instance 'konz 'kar (flip ze2))))
     (setf (slot-value a 'flip) d)
     (setf (slot-value d 'flip) a)
     a))
@@ -45,7 +45,7 @@
   (labels ((rec (list)
 	     (if list
 		 (konz (car list)
-		       (flip (rec (cdr list))))
+		       (rec (cdr list)))
 		 nil)))
     (rec args)))
 
