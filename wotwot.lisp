@@ -1,9 +1,6 @@
 ;;;; wotwot.lisp
 
 (in-package #:wotwot)
-;;below, () represents a single cons cell?
-#+nil 
-(((dest . ???) . ((src . ???) . ???)) . next)
 
 (defclass konz ()
   ((kar :initarg kar :initform nil)
@@ -15,6 +12,7 @@
     (setf (slot-value a 'flip) d)
     (setf (slot-value d 'flip) a)
     a))
+;;;is konz really just a circular list with 2 cons cells?
 
 (set-pprint-dispatch
  'konz
@@ -31,17 +29,23 @@
 (defmethod (setf kar) (new (k konz))
   (setf (slot-value k 'kar) new))
 
-(defmethod kdr ((k konz))
-  (slot-value (slot-value k 'flip) 'kar))
+(defmethod flip ((k konz))
+  (slot-value k 'flip))
+(defmethod flip ((obj t))
+  obj)
 
-(defmethod (setf kar) (new (k konz))
-  (setf (slot-value (slot-value k 'flip) 'kar) new))
+(defmethod kdr ((k konz))
+  (flip (kar (flip k))))
+
+(defmethod (setf kdr) (new (k konz))
+  (setf (kar (flip k))
+	(flip new)))
 
 (defun lizt (&rest args)
   (labels ((rec (list)
 	     (if list
 		 (konz (car list)
-		       (rec (cdr list)))
+		       (flip (rec (cdr list))))
 		 nil)))
     (rec args)))
 
@@ -61,3 +65,19 @@ with the first and second element becoming the kar and kdr respectively"
 ;;;1 0 -> 1
 ;;;0 1 -> 1
 ;;;0 0 -> 0
+
+;;below, () represents a single cons cell?
+#+nil 
+(top
+ (a
+  (b dest . ???) .
+  (c% (d src . ???) . ???))
+ . next)
+
+(defun step? (top)
+  (let* ((a (kar top))
+	 (b (kar a))
+	 (src (kar (kar (kdr a)))))
+    (setf (kar b)
+	  (flip src)))
+  (kdr top))
