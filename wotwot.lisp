@@ -2,7 +2,9 @@
 
 (in-package #:wotwot)
 
-(defclass konz ()
+(defclass konz-parent () ())
+
+(defclass konz (konz-parent)
   ((kar :initarg kar :initform nil)
    (flip :initarg flip :initform nil)))
 
@@ -76,22 +78,6 @@ with the first and second element becoming the kar and kdr respectively"
 
 ;;;(konvert-tree-to-kons '((234 245) (2384 (2774 274))))
 
-;;;1 1 -> 0
-;;;1 0 -> 1
-;;;0 1 -> 1
-;;;0 0 -> 0
-
-;;below, () represents a single cons cell?
-#+nil 
-(((dest ???)
-  ((src ???) ???))
- next)
-
-(defun step? (top)
-  (setf (kar (kar (kar top)))
-	(flip (kar (kar (flip (kar (flip (kar top))))))))
-  (kdr top))
-
 #+nil
 "if konz cells are stored in an array, and each element of the array can point to other elements 
 of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells, then 'flip is just toggling the lowest bit of the index into the array"
@@ -129,7 +115,7 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
   (set-cell n new))
 ;;;;
 
-(defclass konznum ()
+(defclass konznum (konz-parent)
   ((value :initarg value :initform nil)
    (index :initarg index :initform 0)
    (table :initarg table :initform *cells*)))
@@ -358,3 +344,83 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
 	(print "repeated collecting:")
 	(progn (collect (list (slot-value lizt 'index)))
 	       (print-heap))))))
+
+;;;1 1 -> 0
+;;;1 0 -> 1
+;;;0 1 -> 1
+;;;0 0 -> 0
+
+;;below, () represents a single cons cell?
+(defparameter *konz-machine-specification*
+  '(((dest ???)
+     ((src ???) ???))
+    next))
+
+;;;;test input for konz-machine generator
+#+nil
+'(((nil (((dest ???) ???) ???))
+   ((sdf ((src ???) ???))) 234)
+  ((sdfsdf (next 78)) (??? ???)))
+
+;;;;turn 'kdr into 'flip 'kar 'flip for encapsulate
+(defun spread-kdr (list)
+  (apply #'concatenate 'list
+	 (mapcar (lambda (x)
+		   (if (eq 'kdr x)
+		       #+nil
+		       (list 'flip 'kar 'flip)
+		       (list x)
+		       (list x)))
+		 list)))
+
+(defun konz-machine (&optional (tree *konz-machine-specification*))
+   "konz machine generator"
+  (let ((konzes (konvert-tree-to-kons tree)))
+    (let ((stackspec
+	   (konz-machine-spec konzes)))
+      (flet ((ref (var)
+	       (encapsulate (spread-kdr (second (assoc var stackspec))) 'pk)))
+	
+	(assert (eval
+		 `(let ((pk ,konzes))
+		    (and (eq ,(ref 'dest)
+			     'dest)
+			 (eq ,(ref 'next)
+			     'next)
+			 (eq ,(ref 'src)
+			     'src)))))
+	
+	`(progn
+	   (setf ,(ref 'dest)
+		 (flip ,(ref 'src)))
+	   ,(ref 'next))))))
+
+(defun encapsulate (list core)
+  (if list
+      (encapsulate (cdr list)
+		   (list (car list) core))
+      core))
+
+(defparameter *searching-for* '(dest src next))
+
+;;;;walk the tree which is the specification for the one-instruction-set computer,
+;;;;saving the kdrs and kars it takes to get to the location
+(defun konz-machine-spec (spec)
+  "the spec is a tree of konz cells, indicating where different \"registers\" are located"
+  (let ((acc nil))
+    (labels ((rec (spec &optional (stack nil))
+	       (cond
+		 ((symbolp spec)
+		  (when (member spec *searching-for*)
+		    (push (list spec (reverse stack)) acc)))
+		 ((typep spec 'konz-parent)
+		  (rec (kar spec) (cons 'kar stack))
+		  (rec (kdr spec) (cons 'kdr stack))))))
+      (rec spec))
+    acc))
+
+;;;;pk = program kounter
+(defun step? (pk)
+  (setf (kar (kar (kar pk)))
+	(flip (kar (kar (flip (kar (flip (kar pk))))))))
+  (kdr pk))
