@@ -443,3 +443,15 @@ a->b c->d save b and d and swap with code that threads through a and c"
  lambda X
  label <- not necessary with y combinator
  )
+
+;;;allocation {aka cons or konz} via a special konz cell
+;;;multithreading via special konz cells
+;;;permissions via special konz cells
+;;;assignment via two oiscs src->temp-dest0 temp-src1->dest why? because one oisc flips the cell
+;;;lisp if recognizes special NIL. no special nil.
+;;;(if form then else) -> (dif form form2 same different) -> (dif form NIL else then)
+;;;(eq a b) -> (dif a b T NIL)
+;;;dif implemented by assignment testing
+;;;car implemented by destructively modifying parts of the code to reach other cars
+;;;assign-flip implemented by default oisc. flip in place = same kkonz cell for src and dest
+;;;cdr implemented by flip car flip in place
