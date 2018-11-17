@@ -25,7 +25,6 @@
 
 (defmethod kar ((k konz))
   (slot-value k 'kar))
-
 (defmethod (setf kar) (new (k konz))
   (setf (slot-value k 'kar) new))
 
@@ -36,7 +35,6 @@
 
 (defmethod kdr ((k konz))
   (flip (kar (flip k))))
-
 (defmethod (setf kdr) (new (k konz))
   (setf (kar (flip k))
 	(flip new)))
@@ -59,7 +57,7 @@ with the first and second element becoming the kar and kdr respectively"
 	  tree)
       nil))
 
-;;;(konvert-tree-to-kons '((234 234) (234 (234 234))))
+;;;(konvert-tree-to-kons '((234 245) (2384 (2774 274))))
 
 ;;;1 1 -> 0
 ;;;1 0 -> 1
@@ -68,16 +66,42 @@ with the first and second element becoming the kar and kdr respectively"
 
 ;;below, () represents a single cons cell?
 #+nil 
-(top
- (a
-  (b dest . ???) .
-  (c% (d src . ???) . ???))
- . next)
+(((dest ???)
+  ((src ???) ???))
+ next)
 
 (defun step? (top)
-  (let* ((a (kar top))
-	 (b (kar a))
-	 (src (kar (kar (kdr a)))))
-    (setf (kar b)
-	  (flip src)))
+  (setf (kar (kar (kar top)))
+	(flip (kar (kar (flip (kar (flip (kar top))))))))
   (kdr top))
+
+#+nil
+"if konz cells are stored in an array, and each element of the array can point to other elements 
+of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells, then 'flip is just toggling the lowest bit of the index into the array"
+
+#+nil
+"what is the minimum number of 'flip's and 'kar's to have a programming language that's not a turing tarpit?"
+
+
+(defparameter *cells* (make-hash-table))
+(defparameter *chunk-size* 64)
+(defun huh (n)
+  (values (mod n *chunk-size*) ;;;offset into the chunk
+	  (logandc1 (- *chunk-size* 1) n))) ;;;chunk number
+(defun set-cell (n new)
+  (multiple-value-bind (offset num) (huh n)
+    (let ((array (gethash num *cells*)))
+      (unless array
+	(let ((new (make-array *chunk-size*)))
+	  (setf (gethash num *cells*) new)
+	  (setf array new)))
+      (setf (aref array offset) new))))
+
+(defun cell (n)
+  (multiple-value-bind (offset num) (huh n)
+    (let ((array (gethash num *cells*)))
+      (if array
+	  (aref array offset)
+	  0))))
+(defun (setf cell) (new n)
+  (set-cell n new))
