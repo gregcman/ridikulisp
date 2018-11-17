@@ -88,7 +88,7 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
 
 (defparameter *cells* (make-hash-table))
 (defparameter *chunk-size* 64)
-(defparameter *heap-pointer* 2) ;;0 is reserved ?? no?
+(defparameter *heap-pointer* 0) ;;0 is reserved ?? no?
 (defun huh (n)
   (values (mod n *chunk-size*) ;;;offset into the chunk
 	  (logandc1 (- *chunk-size* 1) n))) ;;;chunk number
@@ -127,7 +127,10 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
 (defun make-konsnum (ze1 ze2)
   (let ((start *heap-pointer*))
     (assert (evenp start))
-    (setf *heap-pointer* (+ start 2))
+    (setf *heap-pointer*
+	  (+ start (ecase *heap-direction*
+		     ((:plusp) 2)
+		     ((:minusp) -2))))
     (let ((place1 (+ 1 start)))
       (setf (cell place1)
 	    (make-instance
@@ -154,11 +157,80 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
 (defun togglemod2 (n)
   (logxor 1 n))
 
+(defparameter *heap-direction* :plusp) ;;minusp
+(defun heap-pointer-start ()
+  (ecase *heap-direction*
+    ((:plusp) 0)
+    ((:minusp) -2)))
+(defun toggle-heap-direction ()
+  (setf *heap-direction*
+	(ecase *heap-direction*
+	  ((:plusp) :minusp)
+	  ((:minusp) :plusp)))))
+
 ;;;garbage collector
-(defparameter *roots* (make-hash-table))
 ;;;semispace simulator -> positive and negative two halves of semispace?
-(defun collect ()
-  ())
+(defparameter *write-pointer* -2) ;;;write pointer and heap pointer are same?
+(defparameter *read-pointer* 2)
+(defun collect (&rest roots)
+  (toggle-heap-direction)
+  (setf *read-pointer* (heap-pointer-start))
+  (setf *write-pointer* (heap-pointer-start))
+  (let ((cells-collected 0))
+    (labels
+	(#+nil
+	 (logged ()
+	   (print (list *read-pointer*
+			*write-pointer*
+			)))
+	 (move-to-space (n)
+	   ;;   (print "try move")
+	   ;;   (print n)
+	   (when (ecase *heap-direction*
+		   ((:plusp) (minusp n))
+		   ((:minusp) (not (minusp n))))
+	     ;;  (print "moved")
+	     (move-konznum n
+			   *write-pointer*)
+	     (incf cells-collected)
+	     (incf *write-pointer*
+		   (ecase *heap-direction*
+		     ((:plusp) 2)
+		     ((:minusp) -2))))))
+      ;;  (logged)
+      (dolist (v roots)
+	;;	(print v)
+	(when (typep v 'konznum
+		     )
+	  (move-to-space (slot-value v 'index))))
+      ;; (logged)
+      (block wot
+	(loop
+	   (when (>= (abs *read-pointer*)
+		     (abs *write-pointer*))
+	     (return-from wot nil))
+	   ;;  (print "loop time")
+	   (let ((obj (cell *read-pointer*)))
+	     (when (typep obj 'konznum)
+	       ;;  (print "234234234")
+	       (let ((karobj (kar obj)))
+		 ;; (format t "what: ~a" karobj)
+		 (when (typep karobj 'konznum)
+		   (move-to-space (slot-value karobj 'index))))
+	       (let ((kdrobj (kdr obj)))
+		 (when (typep kdrobj 'konznum)
+		   (move-to-space (slot-value kdrobj 'index))))))
+	   ;;   (logged)
+	   (incf *read-pointer*
+		 (ecase *heap-direction*
+		   ((:plusp) 2)
+		   ((:minusp) -2))))))
+    (setf *heap-pointer* *write-pointer*)
+    cells-collected))
+
+(defun delete-extra-gc-pages ()
+  (utility:dohash (k v) *cells*
+		  (declare (ignorable v))))
 
 (defparameter *konznum-nil* 0)
 
@@ -169,18 +241,18 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
   (setf (slot-value k 'index) new-index))
 
 (defun move-konznum (old-n new-n)
-  (let ((old-a (* 2 old-n))
-	(new-a (* 2 new-n)))
+  (let ((old-a old-n)
+	(new-a new-n))
     (let ((koznum-a (cell old-a)))
       (cond ((typep koznum-a 'konznum)
 	     (update-konzum-index new-a koznum-a)
 	     (setf (cell new-a) koznum-a
-		   (cell old-a) *konznum-nil*)
+		   (cell old-a) new-a)
 	     (let ((new-d (flipfun new-a))
 		   (old-d (flipfun old-a)))
 	       (let ((koznum-d (cell old-d)))
 		 (update-konzum-index new-d koznum-d)
 		 (setf (cell new-d) koznum-d
-		       (cell old-d) *konznum-nil*)))
+		       (cell old-d) new-d)))
 	     t)
 	    (t nil)))))
