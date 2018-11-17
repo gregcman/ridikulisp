@@ -356,6 +356,13 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
      ((src ???) ???))
     next))
 
+;;;;pk = program kounter
+#+nil
+(defun step? (pk)
+  (setf (kar (kar (kar pk)))
+	(flip (kar (kar (flip (kar (flip (kar pk))))))))
+  (kdr pk))
+
 ;;;;test input for konz-machine generator
 #+nil
 '(((nil (((dest ???) ???) ???))
@@ -416,12 +423,6 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
 		  (rec (kdr spec) (cons 'kdr stack))))))
       (rec spec))
     acc))
-
-;;;;pk = program kounter
-(defun step? (pk)
-  (setf (kar (kar (kar pk)))
-	(flip (kar (kar (flip (kar (flip (kar pk))))))))
-  (kdr pk))
 
 #+nil
 "how to test whether two things are equal when there is no comparison operator? assignment and jumping?
