@@ -472,3 +472,11 @@ a->b c->d save b and d and swap with code that threads through a and c"
 ;;;however, when say a number or something else is accessed like a normal konz cell it will be
 ;;;transparently converted back into another representation? can the interpreter prove things about
 ;;;the ridikulisp komputer?
+
+(defun test57 ()
+  (konz-machine	  
+   '(((dest ???)
+      ((src ???) ???))
+     next)))
+
+;;;
