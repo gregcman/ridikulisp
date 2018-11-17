@@ -145,8 +145,17 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
 	  *heap-pointer-start*)))
 
 (defparameter *alloc-delta* 2)
+;;;;how many array slots does 1 single konznum take?
+(defparameter *konznum-cell-count* 2)
+
+(defparameter *max-memory* 10000)
+(defun need-to-collect-p (&optional (new-alloc-size 0))
+  (>= (+ new-alloc-size (heap-size))
+      *max-memory*))
 
 (defun make-konsnum (ze1 ze2)
+  (when (need-to-collect-p *konznum-cell-count*)
+    (collect))
   (let ((start *heap-pointer*))
     (incf *heap-pointer* *alloc-delta*)
     (let ((place1 (togglemod2 start)))
@@ -193,13 +202,14 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
 ;;...dadadadadada|<- heap pointers->|adadadadad....
 
 (defparameter *heap-direction* :plusp) ;;minusp
-(defun print-heap ()
-  (dotimes (ptr (heap-size))
-    (print (cell-stable ptr))
+(defun print-heap (&optional (print-level 4))
+  (let ((*konz-print-level* print-level))
+    (dotimes (ptr (heap-size))
+      (print (cell-stable ptr))
     ;;;put some space between consecutive cells
-    (when (and (oddp ptr)
-	       (plusp ptr))
-      (terpri))))
+      (when (and (oddp ptr)
+		 (plusp ptr))
+	(terpri)))))
 
 ;;;Detect whether pointer n is in a valid heap
 (defun in-heap (n)
@@ -207,19 +217,21 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
     ((:plusp) (>= (- *heap-pointer* 1) n *heap-pointer-start*))
     ((:minusp) (<= (+ *heap-pointer* 1) n *heap-pointer-start*))))
 
+(defparameter *roots* nil)
 ;;;garbage collector
 ;;;semispace simulator
 ;;;The virtual memory uses all integers, positive and negative
 ;;;heap grows positively and when time to GC heap then grows negatively
-(defun collect (&rest roots)
+(defun collect (&optional (roots *roots*))
   ;;Toggle the heap direction.
   (setf *heap-direction*
 	(ecase *heap-direction*
 	  ((:plusp) :minusp)
 	  ((:minusp) :plusp)))
-  (setf *alloc-delta* (* 2 (ecase *heap-direction*
-			     ((:plusp) 1)
-			     ((:minusp) -1))))
+  (setf *alloc-delta* (* *konznum-cell-count*
+			 (ecase *heap-direction*
+			   ((:plusp) 1)
+			   ((:minusp) -1))))
   (setf *heap-pointer-start*
 	(ecase *heap-direction*
 	  ((:plusp) 0)
@@ -339,5 +351,5 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
     (let ((lizt (lizt 0 1 2)))
       (dotimes (x 3)
 	(print "repeated collecting:")
-	(progn (collect (slot-value lizt 'index))
+	(progn (collect (list (slot-value lizt 'index)))
 	       (print-heap))))))
