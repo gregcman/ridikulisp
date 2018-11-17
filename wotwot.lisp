@@ -19,14 +19,27 @@
   (make-konsnum ze1 ze2))
 ;;;is konz really just a circular list with 2 cons cells?
 
+;;;;when nil, keep printing. level means print how deep, similar to *print-level*
+(defparameter *konz-print-level* nil)
+(defparameter *%konz-print-level* 0)
+
+(defun print-konz (stream object)
+  (flet ((next ()
+	   (write-char #\[ stream)
+	   (write (kar object) :stream stream)
+	   (write-char #\  stream)
+	   (write (kdr object) :stream stream)
+	   (write-char #\] stream)))
+    (if *konz-print-level*
+	(if (>= *konz-print-level* *%konz-print-level*)
+	    (let ((*%konz-print-level* (+ *%konz-print-level* 1)))
+	      (next))
+	    (princ "<...>" stream))
+	(next))))
+
 (set-pprint-dispatch
  'konz
- (lambda (stream object)
-   (write-char #\[ stream)
-   (write (kar object) :stream stream)
-   (write-char #\  stream)
-   (write (kdr object) :stream stream)
-   (write-char #\] stream)))
+ 'print-konz)
 (defmethod kar ((k konz))
   (slot-value k 'kar))
 (defmethod (setf kar) (new (k konz))
@@ -123,30 +136,19 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
 
 (set-pprint-dispatch
  'konznum
- ;;nil
-; #+nil
- (lambda (stream object)
-   (write-char #\[ stream)
-   (write (kar object) :stream stream)
-   (write-char #\  stream)
-   (write (kdr object) :stream stream)
-   (write-char #\] stream)))
+ 'print-konz)
 
 (defparameter *heap-pointer* 0) ;;0 is reserved ?? no?
-(defun heap-pointer-start ()
-  (ecase *heap-direction*
-    ((:plusp) 0)
-    ((:minusp) -1)))
+(defparameter *heap-pointer-start* 0)
 (defun heap-size ()
   (abs (- *heap-pointer*
-	  (heap-pointer-start))))
+	  *heap-pointer-start*)))
 
 (defparameter *alloc-delta* 2)
 
 (defun make-konsnum (ze1 ze2)
   (let ((start *heap-pointer*))
-    (setf *heap-pointer*
-	  (+ start *alloc-delta*))
+    (incf *heap-pointer* *alloc-delta*)
     (let ((place1 (togglemod2 start)))
       (setf (cell place1)
 	    (make-instance
@@ -179,8 +181,8 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
 ;;;;which iteration the heap is on, indexing from 0
 (defun translate-stable-index (n)
   (ecase *heap-direction*
-    ((:plusp) (+ (heap-pointer-start) n))
-    ((:minusp) (- (heap-pointer-start) n))))
+    ((:plusp) (+ *heap-pointer-start* n))
+    ((:minusp) (- *heap-pointer-start* n))))
 (defun set-cell-stable (n new)
   (set-cell (translate-stable-index n) new))
 (defun cell-stable (n)
@@ -202,30 +204,32 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
 ;;;Detect whether pointer n is in a valid heap
 (defun in-heap (n)
   (ecase *heap-direction*
-    ((:plusp) (>= (- *heap-pointer* 1) n (heap-pointer-start)))
-    ((:minusp) (<= (+ *heap-pointer* 1) n (heap-pointer-start)))))
+    ((:plusp) (>= (- *heap-pointer* 1) n *heap-pointer-start*))
+    ((:minusp) (<= (+ *heap-pointer* 1) n *heap-pointer-start*))))
 
 ;;;garbage collector
 ;;;semispace simulator
 ;;;The virtual memory uses all integers, positive and negative
 ;;;heap grows positively and when time to GC heap then grows negatively
-(defparameter *read-pointer* 2)
 (defun collect (&rest roots)
   ;;Toggle the heap direction.
   (setf *heap-direction*
 	(ecase *heap-direction*
 	  ((:plusp) :minusp)
 	  ((:minusp) :plusp)))
-  (setf *alloc-delta* (ecase *heap-direction*
-			((:plusp) 2)
-			((:minusp) -2)))
-  (setf *read-pointer* (heap-pointer-start))
-  (setf *heap-pointer* (heap-pointer-start))
+  (setf *alloc-delta* (* 2 (ecase *heap-direction*
+			     ((:plusp) 1)
+			     ((:minusp) -1))))
+  (setf *heap-pointer-start*
+	(ecase *heap-direction*
+	  ((:plusp) 0)
+	  ((:minusp) -1)))
+  (setf *heap-pointer* *heap-pointer-start*)
   (let ((cells-collected 0))
     (labels
 	(#+nil
 	 (logged ()
-	   (print (list *read-pointer*
+	   (print (list
 			*heap-pointer*
 			)))
 	 (move-to-space (n)
@@ -242,30 +246,28 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
 		   *alloc-delta*))))
       ;;  (logged)
       (dolist (v roots)
-	;;	(print v)
-	(when (typep v 'konznum
-		     )
-	  (move-to-space (slot-value v 'index))))
+	(move-to-space v))
       ;; (logged)
       (block wot
-	(loop
-	   (when (>= (abs *read-pointer*)
-		     (abs *heap-pointer*))
-	     (return-from wot nil))
-	   ;;  (print "loop time")
-	   (let ((obj (cell *read-pointer*)))
-	     (when (typep obj 'konznum)
-	       ;;  (print "234234234")
-	       (let ((karobj (kar obj)))
-		 ;; (format t "what: ~a" karobj)
-		 (when (typep karobj 'konznum)
-		   (move-to-space (slot-value karobj 'index))))
-	       (let ((kdrobj (kdr obj)))
-		 (when (typep kdrobj 'konznum)
-		   (move-to-space (slot-value kdrobj 'index))))))
-	   ;;   (logged)
-	   (incf *read-pointer*
-		 *alloc-delta*))))
+	(let ((read-pointer *heap-pointer-start*))
+	  (loop
+	     (when (>= (abs read-pointer)
+		       (abs *heap-pointer*))
+	       (return-from wot nil))
+	     ;;  (print "loop time")
+	     (let ((obj (cell read-pointer)))
+	       (when (typep obj 'konznum)
+		 ;;  (print "234234234")
+		 (let ((karobj (kar obj)))
+		   ;; (format t "what: ~a" karobj)
+		   (when (typep karobj 'konznum)
+		     (move-to-space (slot-value karobj 'index))))
+		 (let ((kdrobj (kdr obj)))
+		   (when (typep kdrobj 'konznum)
+		     (move-to-space (slot-value kdrobj 'index))))))
+	     ;;   (logged)
+	     (incf read-pointer
+		   *alloc-delta*)))))
     (delete-extra-gc-pages)
     cells-collected))
 
@@ -279,9 +281,9 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
   (let ((heap-pointer-page (chunk-number *heap-pointer*)))
     ;;(print (list n heap-pointer-page))
     (ecase *heap-direction*
-      ((:plusp) (or (> (heap-pointer-start) n)
+      ((:plusp) (or (> *heap-pointer-start* n)
 		    (> n heap-pointer-page)))
-      ((:minusp) (or (< (heap-pointer-start) n)
+      ((:minusp) (or (< *heap-pointer-start* n)
 		     (< n heap-pointer-page))))))
 
 (defparameter *konznum-nil* 0)
@@ -300,8 +302,8 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
 	     (update-konzum-index new-a koznum-a)
 	     (setf (cell new-a) koznum-a
 		   (cell old-a) new-a)
-	     (let ((new-d (flipfun new-a))
-		   (old-d (flipfun old-a)))
+	     (let ((new-d (togglemod2 new-a))
+		   (old-d (togglemod2 old-a)))
 	       (let ((koznum-d (cell old-d)))
 		 (update-konzum-index new-d koznum-d)
 		 (setf (cell new-d) koznum-d
@@ -315,3 +317,27 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
 	(lambda (x)
 	  (apply #'lizt (make-list (random x) :initial-element (random 34))))
 	(make-list 9 :initial-element 9)))
+
+(defparameter *depth* 1)
+(defun gengarbage ()
+  (let ((huh
+	 (random *depth*)))
+    (if (or (zerop huh)
+	    (zerop (random 3)))
+	(let ((*depth* (+ *depth* 1)))
+	  (konz (gengarbage)
+		(gengarbage)))
+	huh)))
+
+(defun wowtest ()
+  (let ((*konz-print-level* 4))
+    (print "old:")
+    (print-heap)
+    (print "clearing:")
+    (collect)
+    (print-heap)
+    (let ((lizt (lizt 0 1 2)))
+      (dotimes (x 3)
+	(print "repeated collecting:")
+	(progn (collect (slot-value lizt 'index))
+	       (print-heap))))))
