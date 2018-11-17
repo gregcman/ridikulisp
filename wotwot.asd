@@ -1,11 +1,12 @@
 ;;;; wotwot.asd
 
 (asdf:defsystem #:wotwot
-  :description "Describe wotwot here"
-  :author "Your Name <your.name@example.com>"
-  :license  "Specify license here"
+  :description "a ridiculous lisp"
+  :author "terminal625 <625terminal at gmail dot com>"
+  :license  "MIT"
   :version "0.0.1"
   :serial t
-  :depends-on (#:utility)
+  :depends-on (#:utility
+	       #:trivial-garbage)
   :components ((:file "package")
                (:file "wotwot")))
