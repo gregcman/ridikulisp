@@ -6,12 +6,17 @@
   ((kar :initarg kar :initform nil)
    (flip :initarg flip :initform nil)))
 
-(defun konz (ze1 ze2)
+(defun konzoriginal (ze1 ze2)
   (let ((a (make-instance 'konz 'kar ze1))
 	(d (make-instance 'konz 'kar (flip ze2))))
     (setf (slot-value a 'flip) d)
     (setf (slot-value d 'flip) a)
     a))
+
+(defun konz (ze1 ze2)
+  #+nil
+  (konzoriginal ze1 ze2)
+  (make-konsnum ze1 ze2))
 ;;;is konz really just a circular list with 2 cons cells?
 
 (set-pprint-dispatch
@@ -22,20 +27,19 @@
    (write-char #\  stream)
    (write (kdr object) :stream stream)
    (write-char #\] stream)))
-
 (defmethod kar ((k konz))
   (slot-value k 'kar))
 (defmethod (setf kar) (new (k konz))
   (setf (slot-value k 'kar) new))
-
 (defmethod flip ((k konz))
   (slot-value k 'flip))
+
 (defmethod flip ((obj t))
   obj)
 
-(defmethod kdr ((k konz))
+(defun kdr (k)
   (flip (kar (flip k))))
-(defmethod (setf kdr) (new (k konz))
+(defun (setf kdr) (new k)
   (setf (kar (flip k))
 	(flip new)))
 
@@ -85,6 +89,7 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
 
 (defparameter *cells* (make-hash-table))
 (defparameter *chunk-size* 64)
+(defparameter *heap-pointer* 2) ;;0 is reserved ?? no?
 (defun huh (n)
   (values (mod n *chunk-size*) ;;;offset into the chunk
 	  (logandc1 (- *chunk-size* 1) n))) ;;;chunk number
@@ -99,9 +104,52 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
 
 (defun cell (n)
   (multiple-value-bind (offset num) (huh n)
-    (let ((array (gethash num *cells*)))
+    (let ((array (gethash num *cells*))) 
       (if array
 	  (aref array offset)
 	  0))))
 (defun (setf cell) (new n)
   (set-cell n new))
+
+(defclass konznum ()
+  ((value :initarg value :initform nil)
+   (index :initarg index :initform 0)
+   (table :initarg table :initform *cells*)))
+
+(set-pprint-dispatch
+ 'konznum
+ (lambda (stream object)
+   (write-char #\[ stream)
+   (write (kar object) :stream stream)
+   (write-char #\  stream)
+   (write (kdr object) :stream stream)
+   (write-char #\] stream)))
+
+(defun make-konsnum (ze1 ze2)
+  (let ((start *heap-pointer*))
+    (assert (evenp start))
+    (setf *heap-pointer* (+ start 2))
+    (let ((place1 (+ 1 start)))
+      (setf (cell place1)
+	    (make-instance
+	     'konznum
+	     'table *cells*
+	     'index place1
+	     'value (flip ze2))))
+    (let* ((place0 start)
+	   (k (make-instance
+	       'konznum
+	       'table *cells*
+	       'index place0
+	       'value ze1)))
+      (setf (cell place0)
+	    k)
+      k)))
+
+(defmethod kar ((k konznum))
+  (slot-value k 'value))
+(defmethod (setf kar) (new (k konznum))
+  (setf (slot-value k 'value) new))
+(defmethod flip ((k konznum))
+  (cell (logxor 1 (slot-value k 'index))))
+
