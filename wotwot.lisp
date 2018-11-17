@@ -367,9 +367,7 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
   (apply #'concatenate 'list
 	 (mapcar (lambda (x)
 		   (if (eq 'kdr x)
-		       #+nil
 		       (list 'flip 'kar 'flip)
-		       (list x)
 		       (list x)))
 		 list)))
 
