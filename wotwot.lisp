@@ -422,3 +422,24 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
   (setf (kar (kar (kar pk)))
 	(flip (kar (kar (flip (kar (flip (kar pk))))))))
   (kdr pk))
+
+#+nil
+"how to test whether two things are equal when there is no comparison operator? assignment and jumping?
+a->b c->d save b and d and swap with code that threads through a and c"
+#+nil
+"by testing things this way we can reconstruct 'eq and 'if and 'atom"
+;;move flip test cons
+
+#+nil
+"flip in place = make src and dest the same cell"
+#+nil
+(atom -> everything is a konz cell. how? each konz cell could be attached to the evaluator in some way that allows it to dispatch on different konzes?
+ eq -> if ->assignment testing
+ car -> kar 
+ cdr -> flip kar flip  
+ cons -> having a special konz cell that provides infinite new konz cells
+ quote X
+ cond -> if -> assignment testing
+ lambda X
+ label <- not necessary with y combinator
+ )
