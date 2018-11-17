@@ -272,3 +272,10 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
 		       (cell old-d) new-d)))
 	     t)
 	    (t nil)))))
+
+#+nil
+(apply #'collect
+       (mapcar
+	(lambda (x)
+	  (apply #'lizt (make-list (random x) :initial-element (random 34))))
+	(make-list 9 :initial-element 9)))
