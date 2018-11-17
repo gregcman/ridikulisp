@@ -455,3 +455,20 @@ a->b c->d save b and d and swap with code that threads through a and c"
 ;;;car implemented by destructively modifying parts of the code to reach other cars
 ;;;assign-flip implemented by default oisc. flip in place = same kkonz cell for src and dest
 ;;;cdr implemented by flip car flip in place
+
+;;;There is no built in stack. these primitives built from the OISC function like machine code
+;;;instructions?
+
+
+;;;can these primitives be compressed somehow? hashing? keeping track of ALL references?
+;;;not storing all konz cells with full address width?
+;;;compression decompression principle = patterns that can be simulated easier
+;;;with say a machine multiplication can be "decompressed" back into verbose konz cells?
+;;;church encoding? using "flip" to store individual bits?
+
+;;;perhaps special konz cells can be attached to data to give the emmulator hints? for example,
+;;;a church-encoded number or a bit-flip encoded number can have a konz cell with metadata that says
+;;;"the data here is likely a number" and the interpreter can check and simplify those assertions.
+;;;however, when say a number or something else is accessed like a normal konz cell it will be
+;;;transparently converted back into another representation? can the interpreter prove things about
+;;;the ridikulisp komputer?
