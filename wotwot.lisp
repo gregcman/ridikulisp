@@ -86,9 +86,9 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
 #+nil
 "what is the minimum number of 'flip's and 'kar's to have a programming language that's not a turing tarpit?"
 
+;;;;Virtual memory
 (defparameter *cells* (make-hash-table))
 (defparameter *chunk-size* 64)
-(defparameter *heap-pointer* 0) ;;0 is reserved ?? no?
 (defun huh (n)
   (values (mod n *chunk-size*) ;;;offset into the chunk
 	  (chunk-number n)))		       ;;;chunk number
@@ -111,6 +111,7 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
 	  *konznum-nil*))))
 (defun (setf cell) (new n)
   (set-cell n new))
+;;;;
 
 (defclass konznum ()
   ((value :initarg value :initform nil)
@@ -128,13 +129,22 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
    (write (kdr object) :stream stream)
    (write-char #\] stream)))
 
+(defparameter *heap-pointer* 0) ;;0 is reserved ?? no?
+(defun heap-pointer-start ()
+  (ecase *heap-direction*
+    ((:plusp) 0)
+    ((:minusp) -2)))
+(defun heap-size ()
+  (abs (- *heap-pointer*
+	  (heap-pointer-start))))
+
+(defparameter *alloc-delta* 2)
+
 (defun make-konsnum (ze1 ze2)
   (let ((start *heap-pointer*))
     (assert (evenp start))
     (setf *heap-pointer*
-	  (+ start (ecase *heap-direction*
-		     ((:plusp) 2)
-		     ((:minusp) -2))))
+	  (+ start *alloc-delta*))
     (let ((place1 (+ 1 start)))
       (setf (cell place1)
 	    (make-instance
@@ -161,46 +171,68 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
 (defun togglemod2 (n)
   (logxor 1 n))
 
+;;;;index into virtual memory depending on
+;;;;which iteration the heap is on, indexing from 0
+(defun set-cell-stable (n new)
+  (let ((n (ecase *heap-direction*
+	     ((:plusp) n)
+	     ((:minusp) (- -1 n)))))
+    (set-cell n new)))
+(defun cell-stable (n)
+  (let ((n (ecase *heap-direction*
+	     ((:plusp) n)
+	     ((:minusp) (- -1 n)))))
+    (cell n)))
+(defun (setf cell-stable) (new n)
+  (set-cell-stable n new))
+;;;;
+
 (defparameter *heap-direction* :plusp) ;;minusp
-(defun heap-pointer-start ()
-  (ecase *heap-direction*
-    ((:plusp) 0)
-    ((:minusp) -2)))
-(defun toggle-heap-direction ()
+(defun print-heap ()
+  (dotimes (ptr (heap-size))
+    (print (cell-stable ptr))
+    ;;;put some space between consecutive cells
+    (when (and (oddp ptr)
+	       (plusp ptr))
+      (terpri))))
+
+;;;garbage collector
+;;;semispace simulator
+;;;The virtual memory uses all integers, positive and negative
+;;;heap grows positively and when time to GC heap then grows negatively
+(defparameter *read-pointer* 2)
+(defun collect (&rest roots)
+  ;;Toggle the heap direction.
   (setf *heap-direction*
 	(ecase *heap-direction*
 	  ((:plusp) :minusp)
-	  ((:minusp) :plusp)))))
-
-;;;garbage collector
-;;;semispace simulator -> positive and negative two halves of semispace?
-(defparameter *write-pointer* -2) ;;;write pointer and heap pointer are same?
-(defparameter *read-pointer* 2)
-(defun collect (&rest roots)
-  (toggle-heap-direction)
+	  ((:minusp) :plusp)))
+  (setf *alloc-delta* (ecase *heap-direction*
+			((:plusp) 2)
+			((:minusp) -2)))
   (setf *read-pointer* (heap-pointer-start))
-  (setf *write-pointer* (heap-pointer-start))
+  (setf *heap-pointer* (heap-pointer-start))
   (let ((cells-collected 0))
     (labels
 	(#+nil
 	 (logged ()
 	   (print (list *read-pointer*
-			*write-pointer*
+			*heap-pointer*
 			)))
 	 (move-to-space (n)
 	   ;;   (print "try move")
 	   ;;   (print n)
-	   (when (ecase *heap-direction*
-		   ((:plusp) (minusp n))
-		   ((:minusp) (not (minusp n))))
+	   (when
+	       ;;;;FIXME::Don't move cells that are already moved
+	       (ecase *heap-direction*
+		 ((:plusp) (minusp n))
+		 ((:minusp) (not (minusp n))))
 	     ;;  (print "moved")
 	     (move-konznum n
-			   *write-pointer*)
+			   *heap-pointer*)
 	     (incf cells-collected)
-	     (incf *write-pointer*
-		   (ecase *heap-direction*
-		     ((:plusp) 2)
-		     ((:minusp) -2))))))
+	     (incf *heap-pointer*
+		   *alloc-delta*))))
       ;;  (logged)
       (dolist (v roots)
 	;;	(print v)
@@ -211,7 +243,7 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
       (block wot
 	(loop
 	   (when (>= (abs *read-pointer*)
-		     (abs *write-pointer*))
+		     (abs *heap-pointer*))
 	     (return-from wot nil))
 	   ;;  (print "loop time")
 	   (let ((obj (cell *read-pointer*)))
@@ -226,10 +258,7 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
 		   (move-to-space (slot-value kdrobj 'index))))))
 	   ;;   (logged)
 	   (incf *read-pointer*
-		 (ecase *heap-direction*
-		   ((:plusp) 2)
-		   ((:minusp) -2))))))
-    (setf *heap-pointer* *write-pointer*)
+		 *alloc-delta*))))
     (delete-extra-gc-pages)
     cells-collected))
 
