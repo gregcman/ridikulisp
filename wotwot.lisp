@@ -86,7 +86,6 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
 #+nil
 "what is the minimum number of 'flip's and 'kar's to have a programming language that's not a turing tarpit?"
 
-
 (defparameter *cells* (make-hash-table))
 (defparameter *chunk-size* 64)
 (defparameter *heap-pointer* 2) ;;0 is reserved ?? no?
@@ -97,7 +96,7 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
   (multiple-value-bind (offset num) (huh n)
     (let ((array (gethash num *cells*)))
       (unless array
-	(let ((new (make-array *chunk-size*)))
+	(let ((new (make-array *chunk-size* :initial-element *konznum-nil*)))
 	  (setf (gethash num *cells*) new)
 	  (setf array new)))
       (setf (aref array offset) new))))
@@ -107,7 +106,7 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
     (let ((array (gethash num *cells*))) 
       (if array
 	  (aref array offset)
-	  0))))
+	  *konznum-nil*))))
 (defun (setf cell) (new n)
   (set-cell n new))
 
@@ -151,5 +150,37 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
 (defmethod (setf kar) (new (k konznum))
   (setf (slot-value k 'value) new))
 (defmethod flip ((k konznum))
-  (cell (logxor 1 (slot-value k 'index))))
+  (cell (togglemod2 (slot-value k 'index))))
+(defun togglemod2 (n)
+  (logxor 1 n))
 
+;;;garbage collector
+(defparameter *roots* (make-hash-table))
+;;;semispace simulator -> positive and negative two halves of semispace?
+(defun collect ()
+  ())
+
+(defparameter *konznum-nil* 0)
+
+;;;iterate up to *heap pointer*
+;;;heap pointer grows backwards in negative phase
+
+(defmethod update-konzum-index (new-index (k konznum))
+  (setf (slot-value k 'index) new-index))
+
+(defun move-konznum (old-n new-n)
+  (let ((old-a (* 2 old-n))
+	(new-a (* 2 new-n)))
+    (let ((koznum-a (cell old-a)))
+      (cond ((typep koznum-a 'konznum)
+	     (update-konzum-index new-a koznum-a)
+	     (setf (cell new-a) koznum-a
+		   (cell old-a) *konznum-nil*)
+	     (let ((new-d (flipfun new-a))
+		   (old-d (flipfun old-a)))
+	       (let ((koznum-d (cell old-d)))
+		 (update-konzum-index new-d koznum-d)
+		 (setf (cell new-d) koznum-d
+		       (cell old-d) *konznum-nil*)))
+	     t)
+	    (t nil)))))
