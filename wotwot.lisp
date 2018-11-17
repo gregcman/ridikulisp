@@ -93,6 +93,9 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
   (values (mod n *chunk-size*) ;;;offset into the chunk
 	  (chunk-number n)))		       ;;;chunk number
 (defun chunk-number (n)
+  ;;;;FIXME::this depends on *chunk-size* being a power of two.
+  ;;;;powers of two when subtracting one yield a series of ones. inverted,
+  ;;;;that can mask off the lower bits to yield which chunk to put the thing in
   (logandc1 (- *chunk-size* 1) n))
 (defun set-cell (n new)
   (multiple-value-bind (offset num) (huh n)
@@ -133,7 +136,7 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
 (defun heap-pointer-start ()
   (ecase *heap-direction*
     ((:plusp) 0)
-    ((:minusp) -2)))
+    ((:minusp) -1)))
 (defun heap-size ()
   (abs (- *heap-pointer*
 	  (heap-pointer-start))))
@@ -142,10 +145,9 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
 
 (defun make-konsnum (ze1 ze2)
   (let ((start *heap-pointer*))
-    (assert (evenp start))
     (setf *heap-pointer*
 	  (+ start *alloc-delta*))
-    (let ((place1 (+ 1 start)))
+    (let ((place1 (togglemod2 start)))
       (setf (cell place1)
 	    (make-instance
 	     'konznum
@@ -168,24 +170,25 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
   (setf (slot-value k 'value) new))
 (defmethod flip ((k konznum))
   (cell (togglemod2 (slot-value k 'index))))
+
+;;;;get the counterpart of the pointer to the konz cell
 (defun togglemod2 (n)
   (logxor 1 n))
 
 ;;;;index into virtual memory depending on
 ;;;;which iteration the heap is on, indexing from 0
+(defun translate-stable-index (n)
+  (ecase *heap-direction*
+    ((:plusp) (+ (heap-pointer-start) n))
+    ((:minusp) (- (heap-pointer-start) n))))
 (defun set-cell-stable (n new)
-  (let ((n (ecase *heap-direction*
-	     ((:plusp) n)
-	     ((:minusp) (- -1 n)))))
-    (set-cell n new)))
+  (set-cell (translate-stable-index n) new))
 (defun cell-stable (n)
-  (let ((n (ecase *heap-direction*
-	     ((:plusp) n)
-	     ((:minusp) (- -1 n)))))
-    (cell n)))
+  (cell (translate-stable-index n)))
 (defun (setf cell-stable) (new n)
   (set-cell-stable n new))
 ;;;;
+;;...dadadadadada|<- heap pointers->|adadadadad....
 
 (defparameter *heap-direction* :plusp) ;;minusp
 (defun print-heap ()
@@ -195,6 +198,12 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
     (when (and (oddp ptr)
 	       (plusp ptr))
       (terpri))))
+
+;;;Detect whether pointer n is in a valid heap
+(defun in-heap (n)
+  (ecase *heap-direction*
+    ((:plusp) (>= (- *heap-pointer* 1) n (heap-pointer-start)))
+    ((:minusp) (<= (+ *heap-pointer* 1) n (heap-pointer-start)))))
 
 ;;;garbage collector
 ;;;semispace simulator
@@ -224,9 +233,7 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
 	   ;;   (print n)
 	   (when
 	       ;;;;FIXME::Don't move cells that are already moved
-	       (ecase *heap-direction*
-		 ((:plusp) (minusp n))
-		 ((:minusp) (not (minusp n))))
+	       (not (in-heap n))
 	     ;;  (print "moved")
 	     (move-konznum n
 			   *heap-pointer*)
@@ -272,9 +279,9 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
   (let ((heap-pointer-page (chunk-number *heap-pointer*)))
     ;;(print (list n heap-pointer-page))
     (ecase *heap-direction*
-      ((:plusp) (or (minusp n)
+      ((:plusp) (or (> (heap-pointer-start) n)
 		    (> n heap-pointer-page)))
-      ((:minusp) (or (not (minusp n))
+      ((:minusp) (or (< (heap-pointer-start) n)
 		     (< n heap-pointer-page))))))
 
 (defparameter *konznum-nil* 0)
