@@ -91,7 +91,9 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
 (defparameter *heap-pointer* 0) ;;0 is reserved ?? no?
 (defun huh (n)
   (values (mod n *chunk-size*) ;;;offset into the chunk
-	  (logandc1 (- *chunk-size* 1) n))) ;;;chunk number
+	  (chunk-number n)))		       ;;;chunk number
+(defun chunk-number (n)
+  (logandc1 (- *chunk-size* 1) n))
 (defun set-cell (n new)
   (multiple-value-bind (offset num) (huh n)
     (let ((array (gethash num *cells*)))
@@ -117,6 +119,8 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
 
 (set-pprint-dispatch
  'konznum
+ ;;nil
+; #+nil
  (lambda (stream object)
    (write-char #\[ stream)
    (write (kar object) :stream stream)
@@ -226,11 +230,23 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
 		   ((:plusp) 2)
 		   ((:minusp) -2))))))
     (setf *heap-pointer* *write-pointer*)
+    (delete-extra-gc-pages)
     cells-collected))
 
 (defun delete-extra-gc-pages ()
   (utility:dohash (k v) *cells*
-		  (declare (ignorable v))))
+		  (declare (ignorable v))
+		  (when (page-removable k)
+		    (remhash k *cells*))))
+
+(defun page-removable (n)
+  (let ((heap-pointer-page (chunk-number *heap-pointer*)))
+    ;;(print (list n heap-pointer-page))
+    (ecase *heap-direction*
+      ((:plusp) (or (minusp n)
+		    (> n heap-pointer-page)))
+      ((:minusp) (or (not (minusp n))
+		     (< n heap-pointer-page))))))
 
 (defparameter *konznum-nil* 0)
 
