@@ -355,8 +355,8 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
 
 ;;below, () represents a single cons cell?
 (defparameter *konz-machine-specification*
-  '(((dest ???)
-     ((src ???) ???))
+  '(((src ???)
+     (dest ???))
     next))
 
 ;;;;pk = program kounter
@@ -381,9 +381,19 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
 		       (list x)))
 		 list)))
 
+(defun konvert-tree-to-kons-kudder (tree)
+  "convert a tree of cons cells into a kons tree. each list becomes a kons cell, 
+with the first and second element becoming the kar and kuddr respectively"
+  (if tree
+      (if (consp tree)
+	  (konz (konvert-tree-to-kons-kudder (first tree))
+		(flip (konvert-tree-to-kons-kudder (second tree))))
+	  tree)
+      nil))
+
 (defun konz-machine (&optional (tree *konz-machine-specification*))
    "konz machine generator"
-  (let ((konzes (konvert-tree-to-kons tree)))
+  (let ((konzes (konvert-tree-to-kons-kudder tree)))
     (let ((stackspec
 	   (konz-machine-spec konzes)))
       (flet ((ref (var)
@@ -481,12 +491,6 @@ a->b c->d save b and d and swap with code that threads through a and c"
 ;;;however, when say a number or something else is accessed like a normal konz cell it will be
 ;;;transparently converted back into another representation? can the interpreter prove things about
 ;;;the ridikulisp komputer?
-
-(defun test57 ()
-  (konz-machine	  
-   '(((dest ???)
-      ((src ???) ???))
-     next)))
 
 ;;;minimum number of flips and kars needed?
 ;;setf kar, kar, flip = rplaca, car, cdr?, with all cons cells created as a 2 circular list?
