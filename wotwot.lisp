@@ -521,9 +521,9 @@ a->b c->d save b and d and swap with code that threads through a and c"
   (loop
      (setf
       ;;dest
-      (kar (kar (kar pk)))
+      (kar (kar (flip (kar pk))))
       ;;src
-      (kar (kar (flip (kar pk)))))
+      (flip (kar (kar (kar pk)))))
      ;;next
      (setf pk (kar (flip pk))))) ;;;not necessary to flip PC?
 
@@ -535,13 +535,13 @@ a->b c->d save b and d and swap with code that threads through a and c"
   (loop
      (setf
       ;;dest
-      (caaar pk)
-      ;;src
       (caadar pk)
+      ;;src
+      (cdaaar pk)
       ;;next
       pk
       (cadr pk))))
 
-;; (lambda(k)(loop(setf(caaar k)(caadar k)k(cadr k))))
+;; (lambda(k)(loop(setf(caadar k)(cdaaar k)k(cadr k))))
 
 
