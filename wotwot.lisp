@@ -558,6 +558,7 @@ a->b c->d save b and d and swap with code that threads through a and c"
 
 ;; (lambda(k)(loop(setf(caadar k)(cdaaar k)k(cadr k))))
 ;;some cells "fire" functions when traversed?
+;;aada daaaa ad
 
 (defparameter *pk* nil
   "program kounter")
@@ -625,4 +626,30 @@ with the first and second element becoming the kar and kuddr respectively. konze
 			next
 			))))
 		form)))))))
+
+;;;flipcar in-place
+(defun test123 ()
+  (let ((*print-circle* t)
+	(*kdr-not-kudder-p* nil))
+    (let ((codes
+	   (konvert-tree-to-kons-kudder-kache
+	    (let* ((circular (copy-tree `((((src what) (is this)) ???) circular)))
+		   (actual-circle
+		    (setf (second circular)
+			  circular))
+		   (form
+		    (copy-tree `(nil next))))		   
+	      (setf (first form)
+		    actual-circle)
+	      (setf (second form) form)
+	      
+	      form))))
+      (setf *pk* codes)
+      (print codes)
+      (instruction)
+      (print codes)
+      (instruction)
+      (print codes)
+      (instruction)
+      (print codes))))
 
