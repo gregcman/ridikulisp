@@ -25,19 +25,20 @@
 ;;;is konz really just a circular list with 2 cons cells?
 
 ;;;;when nil, keep printing. level means print how deep, similar to *print-level*
-(defparameter *konz-print-level* nil)
+(defparameter *konz-print-level* 5)
 (defparameter *%konz-print-level* 0)
-(defparameter *kdr-not-kudder-p* t)
+(defparameter *kdr-not-kudder-p* nil) ;;;when set to nil, prints lizts properly.
 
 (defun print-konz (stream object)
   (flet ((next ()
-	   (write-char #\[ stream)
-	   (write (kar object) :stream stream)
-	   (write-char #\  stream)
-	   (write (if *kdr-not-kudder-p*
-		      (kdr object)
-		      (kudder object)) :stream stream)
-	   (write-char #\] stream)))
+	   (pprint-logical-block
+	       (stream nil :prefix "[" :suffix "]")
+	     (pprint-indent :block 1)
+	     (write (kar object) :stream stream)
+	     (write-char #\  stream)
+	     (write (if *kdr-not-kudder-p*
+			(kdr object)
+			(kudder object)) :stream stream))))
     (if *konz-print-level*
 	(if (>= *konz-print-level* *%konz-print-level*)
 	    (let ((*%konz-print-level* (+ *%konz-print-level* 1)))
@@ -596,3 +597,15 @@ with the first and second element becoming the kar and kuddr respectively. konze
 (defun test789 ()
   (konvert-tree-to-kons-kudder-kache
    `(((src ???) (dest ???)) next)))
+
+(defun test789 ()
+  (let ((*print-circle* t)
+	(*kdr-not-kudder-p* nil))
+    (setf *pk*
+	  (print
+	   (konvert-tree-to-kons-kudder-kache
+	    (let ((form
+		   (let ((a '((src-and-dest ???) ???)))
+		     (list `(,a ,a) nil))))
+	      (setf (second form) form)))))))
+
