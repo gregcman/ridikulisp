@@ -16,9 +16,10 @@
     a))
 
 (defun konz (ze1 ze2)
- ; #+nil
-  ;(konzoriginal ze1 ze2)
-  (make-konsnum ze1 ze2)
+  (let ((flipped (flip ze2)))
+    ;; #+nil
+    ;;(konzoriginal ze1 flipped)
+    (make-konsnum ze1 flipped))
   )
 ;;;is konz really just a circular list with 2 cons cells?
 
@@ -54,20 +55,17 @@
   obj)
 
 (defun kdr (k)
-  (kar (flip k))
- ;; (flip (kar (flip k)))
+  (flip (kar (flip k)))
   )
 (defun (setf kdr) (new k)
   (setf (kar (flip k))
-	;new
-;	#+nil
 	(flip new)))
 
 (defun lizt (&rest args)
   (labels ((rec (list)
 	     (if list
 		 (konz (car list)
-		       (print (rec (cdr list))))
+		       (rec (cdr list)))
 		 nil)))
     (rec args)))
 
@@ -374,11 +372,11 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
    ((sdf ((src ???) ???))) 234)
   ((sdfsdf (next 78)) (??? ???)))
 
-;;;;turn 'kdr into 'flip 'kar 'flip for encapsulate
+;;;;turn 'kudder into 'flip 'kar for encapsulate
 (defun spread-kdr (list)
   (apply #'concatenate 'list
 	 (mapcar (lambda (x)
-		   (if (eq 'kdr x)
+		   (if (eq 'kudder x)
 		       (list 'flip 'kar)
 		       (list x)))
 		 list)))
@@ -415,6 +413,11 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
 
 ;;;;walk the tree which is the specification for the one-instruction-set computer,
 ;;;;saving the kdrs and kars it takes to get to the location
+(defun kudder (k)
+  (kar (flip k)))
+(defun (setf kudder) (new k)
+  (setf (kar (flip k))
+	new))
 (defun konz-machine-spec (spec)
   "the spec is a tree of konz cells, indicating where different \"registers\" are located"
   (let ((acc nil))
@@ -425,7 +428,7 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
 		    (push (list spec (reverse stack)) acc)))
 		 ((typep spec 'konz-parent)
 		  (rec (kar spec) (cons 'kar stack))
-		  (rec (kdr spec) (cons 'kdr stack))))))
+		  (rec (kudder spec) (cons 'kudder stack))))))
       (rec spec))
     acc))
 
