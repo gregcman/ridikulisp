@@ -25,7 +25,7 @@
 ;;;is konz really just a circular list with 2 cons cells?
 
 ;;;;when nil, keep printing. level means print how deep, similar to *print-level*
-(defparameter *konz-print-level* 5)
+(defparameter *konz-print-level* 8)
 (defparameter *%konz-print-level* 0)
 (defparameter *kdr-not-kudder-p* nil) ;;;when set to nil, prints lizts properly.
 
@@ -36,6 +36,7 @@
 	     (pprint-indent :block 1)
 	     (write (kar object) :stream stream)
 	     (write-char #\  stream)
+	     (pprint-newline :linear stream)
 	     (write (if *kdr-not-kudder-p*
 			(kdr object)
 			(kudder object)) :stream stream))))
