@@ -18,6 +18,7 @@
 (defun konz (ze1 ze2)
   (let ((flipped (flip ze2)))
     (konzoriginal ze1 flipped)
+    ;;;switch to make-konsnum to use virtual memory garbage collector
 ;;    (make-konsnum ze1 flipped)
     )
   )
@@ -72,12 +73,14 @@
 (defun konvert-tree-to-kons (tree)
   "convert a tree of cons cells into a kons tree. each list becomes a kons cell, 
 with the first and second element becoming the kar and kdr respectively"
-  (if tree
-      (if (consp tree)
-	  (konz (konvert-tree-to-kons (first tree))
-		(konvert-tree-to-kons (second tree)))
-	  tree)
-      nil))
+  (labels ((rec (tree)
+	     (if tree
+		 (if (consp tree)
+		     (konz (rec (first tree))
+			   (rec (second tree)))
+		     tree)
+		 nil)))
+    (rec tree)))
 
 ;;;(konvert-tree-to-kons '((234 245) (2384 (2774 274))))
 
@@ -384,12 +387,14 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
 (defun konvert-tree-to-kons-kudder (tree)
   "convert a tree of cons cells into a kons tree. each list becomes a kons cell, 
 with the first and second element becoming the kar and kuddr respectively"
-  (if tree
-      (if (consp tree)
-	  (konz (konvert-tree-to-kons-kudder (first tree))
-		(flip (konvert-tree-to-kons-kudder (second tree))))
-	  tree)
-      nil))
+  (labels ((rec (tree)
+	     (if tree
+		 (if (consp tree)
+		     (konz (rec (first tree))
+			   (flip (rec (second tree))))
+		     tree)
+		 nil)))
+    (rec tree)))
 
 (defun konz-machine (&optional (tree *konz-machine-specification*))
    "konz machine generator"
@@ -552,3 +557,15 @@ a->b c->d save b and d and swap with code that threads through a and c"
 	(flip (kar (kar (kar *pk*))))
 	*pk*
 	(kar (flip *pk*))))
+
+(defun konvert-tree-to-kons-kudder-kache (tree)
+  "convert a tree of cons cells into a kons tree. each list becomes a kons cell, 
+with the first and second element becoming the kar and kuddr respectively"
+  (labels ((rec (tree)
+	     (if tree
+		 (if (consp tree)
+		     (konz (rec (first tree))
+			   (flip (rec (second tree))))
+		     tree)
+		 nil)))
+    (rec tree)))
