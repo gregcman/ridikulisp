@@ -27,13 +27,16 @@
 ;;;;when nil, keep printing. level means print how deep, similar to *print-level*
 (defparameter *konz-print-level* nil)
 (defparameter *%konz-print-level* 0)
+(defparameter *kdr-not-kudder-p* t)
 
 (defun print-konz (stream object)
   (flet ((next ()
 	   (write-char #\[ stream)
 	   (write (kar object) :stream stream)
 	   (write-char #\  stream)
-	   (write (kdr object) :stream stream)
+	   (write (if *kdr-not-kudder-p*
+		      (kdr object)
+		      (kudder object)) :stream stream)
 	   (write-char #\] stream)))
     (if *konz-print-level*
 	(if (>= *konz-print-level* *%konz-print-level*)
@@ -583,8 +586,13 @@ with the first and second element becoming the kar and kuddr respectively. konze
       (rec tree))))
 
 (defun test89 ()
-  (let ((*print-circle* t))
+  (let ((*print-circle* t)
+	(*kdr-not-kudder-p* nil))
     (print
      (konvert-tree-to-kons-kudder-kache
       (let ((a '(hello world)))
 	`(,a (,a (,a ,a))))))))
+
+(defun test789 ()
+  (konvert-tree-to-kons-kudder-kache
+   `(((src ???) (dest ???)) next)))
