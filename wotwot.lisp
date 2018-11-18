@@ -10,15 +10,16 @@
 
 (defun konzoriginal (ze1 ze2)
   (let ((a (make-instance 'konz 'kar ze1))
-	(d (make-instance 'konz 'kar (flip ze2))))
+	(d (make-instance 'konz 'kar ze2)))
     (setf (slot-value a 'flip) d)
     (setf (slot-value d 'flip) a)
     a))
 
 (defun konz (ze1 ze2)
-  #+nil
-  (konzoriginal ze1 ze2)
-  (make-konsnum ze1 ze2))
+ ; #+nil
+  ;(konzoriginal ze1 ze2)
+  (make-konsnum ze1 ze2)
+  )
 ;;;is konz really just a circular list with 2 cons cells?
 
 ;;;;when nil, keep printing. level means print how deep, similar to *print-level*
@@ -53,16 +54,20 @@
   obj)
 
 (defun kdr (k)
-  (flip (kar (flip k))))
+  (kar (flip k))
+ ;; (flip (kar (flip k)))
+  )
 (defun (setf kdr) (new k)
   (setf (kar (flip k))
+	;new
+;	#+nil
 	(flip new)))
 
 (defun lizt (&rest args)
   (labels ((rec (list)
 	     (if list
 		 (konz (car list)
-		       (rec (cdr list)))
+		       (print (rec (cdr list))))
 		 nil)))
     (rec args)))
 
@@ -153,7 +158,7 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
 	     'konznum
 	     'table *cells*
 	     'index place1
-	     'value (flip ze2))))
+	     'value ze2)))
     (let* ((place0 start)
 	   (k (make-instance
 	       'konznum
@@ -374,7 +379,7 @@ of the array, and the 'kar and 'kdr are stored as consecutive even and odd cells
   (apply #'concatenate 'list
 	 (mapcar (lambda (x)
 		   (if (eq 'kdr x)
-		       (list 'flip 'kar 'flip)
+		       (list 'flip 'kar)
 		       (list x)))
 		 list)))
 
@@ -480,4 +485,56 @@ a->b c->d save b and d and swap with code that threads through a and c"
       ((src ???) ???))
      next)))
 
-;;;
+;;;minimum number of flips and kars needed?
+;;setf kar, kar, flip = rplaca, car, cdr?, with all cons cells created as a 2 circular list?
+;;a 2-circular list greatly simpilfies the implimentaion of cdr?x
+#+nil
+;;pk
+(
+ ;;kar pk
+ (
+  ;;kar kar pk    
+  (
+   ;;kar kar kar pk    
+   dest
+
+   ...)
+  ;;kar flip kar pk
+  (
+   ;;kar kar flip kar pk
+   src
+
+   ...))
+ ;;kar flip pk
+ next)
+
+;;;three levels of indirection is necessary ?
+
+(defun step2? (pk)
+  (loop
+     (setf
+      ;;dest
+      (kar (kar (kar pk)))
+      ;;src
+      (kar (kar (flip (kar pk)))))
+     ;;next
+     (setf pk (kar (flip pk))))) ;;;not necessary to flip PC?
+
+;;kar prefered to kdr because kdr is kar flip kar or kar flip?
+
+;;; is this it?
+;;; The ultimate interpreter?
+(defun step3? (pk)
+  (loop
+     (setf
+      ;;dest
+      (caaar pk)
+      ;;src
+      (caadar pk)
+      ;;next
+      pk
+      (cadr pk))))
+
+;; (lambda(k)(loop(setf(caaar k)(caadar k)k(cadr k))))
+
+
