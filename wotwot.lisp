@@ -390,8 +390,12 @@ with the first and second element becoming the kar and kuddr respectively"
   (labels ((rec (tree)
 	     (if tree
 		 (if (consp tree)
-		     (konz (rec (first tree))
-			   (flip (rec (second tree))))
+		     (let ((obj (konz nil nil)))
+		       (setf (kar obj)
+			     (rec (first tree))
+			     (kudder obj)
+			     (rec (second tree)))
+		       obj)
 		     tree)
 		 nil)))
     (rec tree)))
@@ -560,12 +564,27 @@ a->b c->d save b and d and swap with code that threads through a and c"
 
 (defun konvert-tree-to-kons-kudder-kache (tree)
   "convert a tree of cons cells into a kons tree. each list becomes a kons cell, 
-with the first and second element becoming the kar and kuddr respectively"
-  (labels ((rec (tree)
-	     (if tree
-		 (if (consp tree)
-		     (konz (rec (first tree))
-			   (flip (rec (second tree))))
-		     tree)
-		 nil)))
-    (rec tree)))
+with the first and second element becoming the kar and kuddr respectively. konzes are cached."
+  (let ((hash (make-hash-table)))
+    (labels ((rec (tree)
+	       (if tree
+		   (if (consp tree)
+		       (let ((cached? (gethash tree hash)))
+			 (or cached?
+			     (let ((obj (konz nil nil)))
+			       (setf (gethash tree hash) obj)
+			       (setf (kar obj)
+				     (rec (first tree))
+				     (kudder obj)
+				     (rec (second tree)))
+			       obj)))
+		       tree)
+		   nil)))
+      (rec tree))))
+
+(defun test89 ()
+  (let ((*print-circle* t))
+    (print
+     (konvert-tree-to-kons-kudder-kache
+      (let ((a '(hello world)))
+	`(,a (,a (,a ,a))))))))
