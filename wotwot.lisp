@@ -599,6 +599,7 @@ with the first and second element becoming the kar and kuddr respectively. konze
   (konvert-tree-to-kons-kudder-kache
    `(((src ???) (dest ???)) next)))
 
+;;;;in-place toggler flipper
 (defun test789 ()
   (let ((*print-circle* t)
 	(*kdr-not-kudder-p* nil))
@@ -609,4 +610,19 @@ with the first and second element becoming the kar and kuddr respectively. konze
 		   (let ((a '((src-and-dest ???) ???)))
 		     (list `(,a ,a) nil))))
 	      (setf (second form) form)))))))
+
+;;;;move. run (instruction) twice and see result
+(defun test56 ()
+  (let ((*print-circle* t)
+	(*kdr-not-kudder-p* nil))
+    (setf *pk*
+	  (print
+	   (konvert-tree-to-kons-kudder-kache
+	    (let ((intermediate `(intermediate ??)))
+	      (let ((form
+		     `((((src <_<) ???) ,intermediate)
+		       ((,intermediate (dest ?))
+			next
+			))))
+		form)))))))
 
