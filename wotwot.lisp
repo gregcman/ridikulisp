@@ -17,9 +17,9 @@
 
 (defun konz (ze1 ze2)
   (let ((flipped (flip ze2)))
-    ;; #+nil
-    ;;(konzoriginal ze1 flipped)
-    (make-konsnum ze1 flipped))
+    (konzoriginal ze1 flipped)
+;;    (make-konsnum ze1 flipped)
+    )
   )
 ;;;is konz really just a circular list with 2 cons cells?
 
@@ -531,17 +531,24 @@ a->b c->d save b and d and swap with code that threads through a and c"
 
 ;;; is this it?
 ;;; The ultimate interpreter?
-(defun step3? (pk)
+(defun step3? (k)
   (loop
      (setf
       ;;dest
-      (caadar pk)
+      (caadar k)
       ;;src
-      (cdaaar pk)
+      (cdaaar k)
       ;;next
-      pk
-      (cadr pk))))
+      k
+      (cadr k))))
 
 ;; (lambda(k)(loop(setf(caadar k)(cdaaar k)k(cadr k))))
+;;some cells "fire" functions when traversed?
 
-
+(defparameter *pk* nil
+  "program kounter")
+(defun instruction () 
+  (setf (kar (kar (flip (kar *pk*))))
+	(flip (kar (kar (kar *pk*))))
+	*pk*
+	(kar (flip *pk*))))
