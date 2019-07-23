@@ -1,8 +1,16 @@
-## A Toy Language Based On A Really Simple Interpreter
+## A Toy Language Based On A Tiny Interpreter
 
 ```
 ;;This is the entire interpreter!
 (defun step (k) (loop (setf (caadar k) (cdaaar k) k (cadr k))))
+```
+```
+///psuedo-C. Assume that pointers to ints can have their lowest bit flipped with & 1
+int *k;
+for (;;){
+  **(1 & *k) = (1 & ***k);
+  k = *(1 & k);
+}
 ```
 
 The program is completely made out of cons cells.
@@ -11,9 +19,9 @@ The program is completely made out of cons cells.
 
 Turing-Completeness
 
-Benefits: 
+Benefits:
 
-Since the data structure is so simple, adding new features should be trivial. Like networking, live reloading, security and capabilities.
+Since the data structure is so simple, adding new features should be trivial. Like networking, live reloading, securit, capabilities, and multithreading.
 
 Drawbacks:
 
