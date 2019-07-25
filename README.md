@@ -21,7 +21,7 @@ Turing-Completeness
 
 Benefits:
 
-Since the data structure is so simple, adding new features should be trivial. Like networking, live reloading, securit, capabilities, and multithreading.
+Since the data structure is so simple, adding new features should be trivial. Like networking, live reloading, security, capabilities, and multithreading.
 
 Drawbacks:
 
